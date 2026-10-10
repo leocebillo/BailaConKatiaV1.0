@@ -8,7 +8,7 @@ window.BCK_CONFIG = {
   },
   adminEmails: [
     "leocebillobusiness@gmail.com",
-    "katia@example.com",
+    "jose.d.aleman@gmail.com",
     "husband@example.com"
   ]
 };
