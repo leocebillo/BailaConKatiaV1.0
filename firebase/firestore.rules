@@ -1,0 +1,43 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{db}/documents {
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && exists(/databases/$(db)/documents/admins/$(request.auth.uid)); }
+    function inClass(cid) { return signedIn() && cid in get(/databases/$(db)/documents/users/$(request.auth.uid)).data.join; }
+
+    match /users/{uid} {
+      allow read, write: if signedIn() && request.auth.uid == uid;
+    }
+    match /admins/{uid} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow write: if false;
+    }
+    match /posts/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+    match /chats/{cid}/messages/{mid} {
+      allow read: if inClass(cid) || isAdmin();
+      allow create: if inClass(cid)
+        && request.resource.data.uid == request.auth.uid
+        && request.resource.data.t is string
+        && request.resource.data.t.size() <= 500;
+      allow delete: if isAdmin();
+
+function isSiteStaff() {
+  return request.auth != null
+    && request.auth.token.email in [
+      'leo@example.com',
+      'katia@example.com',
+      'husband@example.com'
+    ];
+}
+
+match /siteGallery/{id}  { allow read: if true; allow write: if isSiteStaff(); }
+match /siteClasses/{id}  { allow read: if true; allow write: if isSiteStaff(); }
+match /sitePackages/{id} { allow read: if true; allow write: if isSiteStaff(); }
+match /siteInfo/{id}     { allow read: if true; allow write: if isSiteStaff(); }
+
+    }
+  }
+}
