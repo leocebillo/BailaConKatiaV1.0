@@ -27,7 +27,7 @@ service cloud.firestore {
 function isSiteStaff() {
   return request.auth != null
     && request.auth.token.email in [
-      'leo@example.com',
+      'leocebillobusiness@gmail.com',
       'katia@example.com',
       'husband@example.com'
     ];
