@@ -49,7 +49,7 @@
     if (old) old.remove();
     const t = h('div', { class: 'toast' + (bad ? ' bad' : ''), role: 'status' }, text);
     document.body.append(t);
-    setTimeout(() => t.remove(), 4000);
+    setTimeout(() => t.remove(), 7000);
   }
 
   function explain(err) {
@@ -356,8 +356,11 @@
     bck.auth.onAuthStateChanged(user => {
       isStaff = !!user && staff.includes((user.email || '').toLowerCase());
       if (user && !isStaff) {
+        const sample = staff.some(e => e.endsWith('@example.com'));
+        toast(sample
+          ? 'The staff list in firebase-config.js still has the sample emails.'
+          : `${user.email} is not on the staff list in firebase-config.js.`, true);
         bck.auth.signOut();
-        toast('That account is not set up to edit the site.', true);
         return;
       }
       document.body.classList.toggle('is-admin', isStaff);
