@@ -7,7 +7,7 @@ window.BCK_CONFIG = {
     appId: "1:744137554320:web:6a43bfcb36fd51d3a99b15"
   },
   adminEmails: [
-    "cedilloleon04@gmail.com",
+    "leocebillobusiness@gmail.com",
     "katia@example.com",
     "husband@example.com"
   ]
