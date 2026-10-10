@@ -28,7 +28,7 @@ function isSiteStaff() {
   return request.auth != null
     && request.auth.token.email in [
       'leocebillobusiness@gmail.com',
-      'katia@example.com',
+      'jose.d.aleman@gmail.com',
       'husband@example.com'
     ];
 }
