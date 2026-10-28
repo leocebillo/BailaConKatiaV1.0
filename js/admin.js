@@ -1,7 +1,16 @@
 // Editing tools for Katia, her husband and Leo. Nothing here shows up unless a staff account is signed in.
 (function () {
   const bck = window.bck;
-  if (!bck || !bck.configured) return;
+
+  // If something needed for editing is missing, say so instead of failing silently.
+  const problem = !bck ? 'js/db.js did not load'
+    : !window.BCK_CONFIG ? 'js/firebase-config.js was not found'
+    : !bck.configured ? 'js/firebase-config.js still has the placeholder Firebase keys'
+    : !(bck.v >= 3 && bck.currentList && bck.state && bck.state.text && bck.defaults && bck.defaults.lists)
+      ? 'some files in the js folder are older copies (db.js, defaults.js or site.js)'
+      : '';
+  if (problem) return addSetupLink(problem);
+
   const { h } = bck;
 
   const staff = ((window.BCK_CONFIG || {}).adminEmails || []).map(e => e.toLowerCase());
@@ -462,16 +471,26 @@
     e.preventDefault();
     e.stopPropagation();
 
-    if (hit.dataset.t) return editText(hit);
-    if (hit.dataset.info) {
-      return CONTACT_KEYS.includes(hit.dataset.info)
-        ? editInfo(CONTACT_KEYS, 'Edit contact info')
-        : editInfo(ABOUT_KEYS, 'Edit bio and numbers');
+    try {
+      if (hit.dataset.t) return editText(hit);
+      if (hit.dataset.info) {
+        return CONTACT_KEYS.includes(hit.dataset.info)
+          ? editInfo(CONTACT_KEYS, 'Edit contact info')
+          : editInfo(ABOUT_KEYS, 'Edit bio and numbers');
+      }
+      if (hit.dataset.listEditor) return editList(hit.dataset.listEditor, hit.dataset.listEditor === 'classes' ? 'Edit classes' : 'Edit passes');
+      const titles = { faq: 'Edit questions', steps: 'Edit steps', perks: 'Edit perks' };
+      editDocList(hit.dataset.docListEditor, titles[hit.dataset.docListEditor]);
+    } catch (err) {
+      console.error(err);
+      toast('Could not open the editor: ' + err.message, true);
     }
-    if (hit.dataset.listEditor) return editList(hit.dataset.listEditor, hit.dataset.listEditor === 'classes' ? 'Edit classes' : 'Edit passes');
-    const titles = { faq: 'Edit questions', steps: 'Edit steps', perks: 'Edit perks' };
-    editDocList(hit.dataset.docListEditor, titles[hit.dataset.docListEditor]);
   }, true);
+
+  // staff should see a script problem instead of a page that quietly does nothing
+  window.addEventListener('error', e => {
+    if (isStaff) toast('Something broke on this page: ' + e.message, true);
+  });
 
   /* ---------- start ---------- */
 
@@ -496,4 +515,27 @@
       if (isStaff && !was) toast('Tap any text with a dotted outline to change it.');
     });
   });
+
+  // plain DOM on purpose: this runs when the normal helpers may be missing
+  function addSetupLink(why) {
+    console.warn('Staff editing is off: ' + why);
+    const holder = document.querySelector('footer .wrap');
+    if (!holder) return;
+    const link = document.createElement('a');
+    link.href = '#';
+    link.className = 'staff-link';
+    link.textContent = 'Staff';
+    link.addEventListener('click', e => {
+      e.preventDefault();
+      const old = document.querySelector('.toast');
+      if (old) old.remove();
+      const note = document.createElement('div');
+      note.className = 'toast bad';
+      note.setAttribute('role', 'status');
+      note.textContent = "Editing can't start: " + why + '. Upload every file from the update, then refresh.';
+      document.body.append(note);
+      setTimeout(() => note.remove(), 12000);
+    });
+    holder.append(' · ', link);
+  }
 })();
