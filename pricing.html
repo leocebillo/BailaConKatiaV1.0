@@ -13,7 +13,7 @@
 <body class="bg-color nobar">
 <div class="flag-strip" id="flagStrip" aria-hidden="true"></div>
 <div class="wrap">
-<nav aria-label="Main"><b>Baila con Katia</b><div id="menu">
+<nav aria-label="Main"><b data-t="brand">Baila con Katia</b><div id="menu">
 <a href="index.html">Home</a>
 <a href="classes.html">Classes</a>
 <a href="about.html">About</a>
@@ -24,15 +24,16 @@
 </div>
 <section class="hot" id="pay"><div class="wrap pay">
 <div>
-<h2>Find your pass.</h2>
-<p class="lead">Pay online to save your spot, or choose Zelle, Cash App or pay at the studio.</p>
+<h2 data-t="pricing_title">Find your pass.</h2>
+<p class="lead" data-t="pricing_lead">Pay online to save your spot, or choose Zelle, Cash App or pay at the studio.</p>
 <div class="edit-slot" data-edit-list="packages" data-label="Edit passes"></div>
 <div class="pkgs" id="pkgs"></div>
 <div class="edit-slot" data-edit-info="zelle,cashapp" data-label="Edit Zelle and Cash App"></div>
-<ul class="perks"><li>No partner needed</li><li>Beginners welcome</li><li>Any style, any night</li></ul>
+<div class="edit-slot" data-edit-doc-list="perks" data-label="Edit perks"></div>
+<ul class="perks" id="perksList" data-doc-list-editor="perks"></ul>
 </div>
 <div class="box">
-<h3>Pay &amp; reserve</h3>
+<h3 data-t="pricing_box_title">Pay &amp; reserve</h3>
 <form id="f" novalidate>
 <label for="n">Full name</label><input id="n" autocomplete="name">
 <label for="e">Email</label><input id="e" type="email" autocomplete="email">
@@ -46,13 +47,13 @@
 <div class="total"><span>Total</span><span id="tot">$0</span></div>
 <button class="btn" type="submit">Confirm and pay</button>
 <div id="done" role="status" hidden></div>
-<p class="note">Demo checkout: no real charges yet.</p>
+<p class="note" data-t="pricing_note">Demo checkout: no real charges yet.</p>
 </form>
 </div>
 </div></section>
 
-<div class="bar"><a class="btn" href="pricing.html">Book a class</a><a class="btn ghost" href="contact.html">Visit</a></div>
-<footer><div class="wrap">© 2026 Baila con Katia Dance Academy · Made with corazón in the 956</div></footer>
+<div class="bar"><a class="btn" href="pricing.html" data-t="bar_book">Book a class</a><a class="btn ghost" href="contact.html" data-t="bar_visit">Visit</a></div>
+<footer><div class="wrap"><span data-t="footer">© 2026 Baila con Katia Dance Academy · Made with corazón in the 956</span></div></footer>
 <script defer src="js/firebase-config.js"></script>
 <script defer src="js/db.js"></script>
 <script defer src="js/defaults.js"></script>
