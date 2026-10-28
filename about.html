@@ -13,7 +13,7 @@
 <body class="bg-neon">
 <div class="flag-strip" id="flagStrip" aria-hidden="true"></div>
 <div class="wrap">
-<nav aria-label="Main"><b>Baila con Katia</b><div id="menu">
+<nav aria-label="Main"><b data-t="brand">Baila con Katia</b><div id="menu">
 <a href="index.html">Home</a>
 <a href="classes.html">Classes</a>
 <a href="about.html" aria-current="page">About</a>
@@ -25,23 +25,22 @@
 <section><div class="wrap">
 <div class="ab"><div><div class="portrait" data-portrait>Placeholder<br>(add portrait)</div>
 <div class="edit-slot" data-edit-portrait data-label="Change photo"></div></div>
-<div><h2>Dance education rooted in the Rio Grande Valley</h2>
+<div><h2 data-t="about_title">Dance education rooted in the Rio Grande Valley</h2>
 <div class="edit-slot" data-edit-info="bio,years,students,styles" data-label="Edit bio and numbers"></div>
 <p class="lead" data-info="bio">Placeholder Placeholder Placeholder</p>
-<div class="facts"><div><b data-info="years">[00]+</b><span>years teaching</span></div><div><b data-info="students">[000]+</b><span>students taught</span></div><div><b data-info="styles">4</b><span>styles offered</span></div></div>
-<a class="btn" href="pricing.html">Book a class</a></div></div></div></section>
+<div class="facts"><div><b data-info="years">[00]+</b><span data-t="about_f1">years teaching</span></div><div><b data-info="students">[000]+</b><span data-t="about_f2">students taught</span></div><div><b data-info="styles">4</b><span data-t="about_f3">styles offered</span></div></div>
+<a class="btn" href="pricing.html" data-t="about_btn">Book a class</a></div></div></div></section>
 <section class="band"><div class="wrap ab">
-<div><h2>What to expect</h2><p class="lead">Each class follows the same structure so you always know where you are.</p>
-<ol class="steps"><li><strong>Warm-up.</strong> Ten minutes to loosen up and find the beat.</li><li><strong>Technique.</strong> New steps broken down slowly, with partner rotation.</li><li><strong>Social dance.</strong> Put it to music with no pressure.</li></ol></div>
-<div><h2>Questions</h2>
-<details><summary>Do I need a partner?</summary><p>No. We rotate partners during class.</p></details>
-<details><summary>What should I wear?</summary><p>Comfortable clothes and shoes you can pivot in. Avoid sneakers with heavy grip.</p></details>
-<details><summary>Are classes in English or Spanish?</summary><p>Both. Katia teaches in English y español.</p></details>
-<details><summary>Can I try one class first?</summary><p>Yes. The drop-in pass is made for that.</p></details>
+<div><h2 data-t="about_exp_title">What to expect</h2><p class="lead" data-t="about_exp_lead">Each class follows the same structure so you always know where you are.</p>
+<div class="edit-slot" data-edit-doc-list="steps" data-label="Edit steps"></div>
+<ol class="steps" id="stepsList" data-doc-list-editor="steps"></ol></div>
+<div><h2 data-t="about_faq_title">Questions</h2>
+<div class="edit-slot" data-edit-doc-list="faq" data-label="Edit questions"></div>
+<div id="faqList" data-doc-list-editor="faq"></div>
 </div></div></section>
 
-<div class="bar"><a class="btn" href="pricing.html">Book a class</a><a class="btn ghost" href="contact.html">Visit</a></div>
-<footer><div class="wrap">© 2026 Baila con Katia Dance Academy · Made with corazón in the 956</div></footer>
+<div class="bar"><a class="btn" href="pricing.html" data-t="bar_book">Book a class</a><a class="btn ghost" href="contact.html" data-t="bar_visit">Visit</a></div>
+<footer><div class="wrap"><span data-t="footer">© 2026 Baila con Katia Dance Academy · Made with corazón in the 956</span></div></footer>
 <script defer src="js/firebase-config.js"></script>
 <script defer src="js/db.js"></script>
 <script defer src="js/defaults.js"></script>
