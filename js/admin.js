@@ -7,7 +7,9 @@
   const staff = ((window.BCK_CONFIG || {}).adminEmails || []).map(e => e.toLowerCase());
   const MAX_PHOTOS = 12;
   let isStaff = false;
+  let editing = true;   // staff can switch to a clean preview with the button in the gold bar
 
+  // lists stored one document per item
   const LISTS = {
     classes: {
       col: 'siteClasses', flag: 'editedClasses', noun: 'Class',
@@ -29,6 +31,22 @@
     }
   };
 
+  // short lists stored together in one document (siteInfo/lists)
+  const DOC_LISTS = {
+    faq: {
+      noun: 'Question',
+      fields: [{ k: 'q', label: 'Question' }, { k: 'a', label: 'Answer', type: 'textarea' }]
+    },
+    steps: {
+      noun: 'Step',
+      fields: [{ k: 't', label: 'Step name (example: Warm-up.)' }, { k: 'd', label: 'What happens', type: 'textarea' }]
+    },
+    perks: {
+      noun: 'Perk',
+      fields: [{ k: 't', label: 'Perk' }]
+    }
+  };
+
   const INFO = {
     address: { label: 'Studio address', type: 'textarea' },
     phone: { label: 'Phone' },
@@ -41,6 +59,9 @@
     zelle: { label: 'Zelle email or phone' },
     cashapp: { label: 'Cash App name (example: $BailaConKatia)' }
   };
+
+  const CONTACT_KEYS = ['address', 'phone', 'hours', 'social'];
+  const ABOUT_KEYS = ['bio', 'years', 'students', 'styles'];
 
   /* ---------- small helpers ---------- */
 
@@ -101,6 +122,8 @@
   }
 
   const pill = (label, onclick) => h('button', { type: 'button', class: 'adm-pill', onclick }, label);
+  const siteDoc = id => bck.db.collection('siteInfo').doc(id);
+  const removeField = () => firebase.firestore.FieldValue.delete();
 
   function toDataUrl(file, max, quality) {
     return new Promise((resolve, reject) => {
@@ -182,15 +205,61 @@
     }, 'Staff'));
   }
 
+  function applyMode() {
+    document.body.classList.toggle('is-admin', isStaff);
+    document.body.classList.toggle('editing', isStaff && editing);
+  }
+
   function drawBar(user) {
     document.querySelectorAll('.adm-bar').forEach(el => el.remove());
     if (!isStaff) return;
+    const toggle = h('button', { type: 'button', class: 'adm-toggle' }, editing ? 'Preview' : 'Edit');
+    toggle.addEventListener('click', () => {
+      editing = !editing;
+      toggle.textContent = editing ? 'Preview' : 'Edit';
+      applyMode();
+    });
     document.body.append(h('div', { class: 'adm-bar' },
-      h('span', {}, 'Editing as ', user.email),
+      h('span', {}, user.email),
+      toggle,
       h('button', { type: 'button', onclick: () => bck.auth.signOut() }, 'Sign out')));
   }
 
   /* ---------- editors ---------- */
+
+  // one text on the page: tap it, change it, save it. Empty text puts the original back.
+  function editText(el) {
+    const key = el.dataset.t;
+    const saved = bck.state.text[key];
+    const input = h('textarea', { rows: Math.min(8, Math.max(2, Math.ceil(el.textContent.length / 40))) });
+    input.value = el.textContent;
+
+    const actions = [{ label: 'Cancel', ghost: true, run: close => close() }];
+    if (typeof saved === 'string' && saved) {
+      actions.push({
+        label: 'Reset',
+        ghost: true,
+        run: async (close, btn) => {
+          if (await attempt(btn, () => siteDoc('text').set({ [key]: removeField() }, { merge: true }))) {
+            close();
+            toast('Back to the original text');
+          }
+        }
+      });
+    }
+    actions.push({
+      label: 'Save',
+      run: async (close, btn) => {
+        const value = input.value.trim();
+        if (await attempt(btn, () => siteDoc('text').set({ [key]: value || removeField() }, { merge: true }))) {
+          close();
+          toast('Saved');
+        }
+      }
+    });
+    openDialog('Edit text', h('label', {}, 'Text on the site', input), actions);
+    input.focus();
+  }
 
   function editInfo(keys, title) {
     const cur = bck.current('info');
@@ -202,7 +271,7 @@
         run: async (close, btn) => {
           const data = {};
           fields.forEach(([k, f]) => { data[k] = f.read(); });
-          if (await attempt(btn, () => bck.db.collection('siteInfo').doc('main').set(data, { merge: true }))) {
+          if (await attempt(btn, () => siteDoc('main').set(data, { merge: true }))) {
             close();
             toast('Saved');
           }
@@ -211,10 +280,9 @@
     ]);
   }
 
-  function editList(name, title) {
-    const def = LISTS[name];
-    const original = bck.current(name);
-    const rows = original.map(item => ({ id: item.id, vals: Object.assign({}, item) }));
+  // rows you can edit, reorder, remove and add; shared by every list on the site
+  function rowEditor(def, items) {
+    const rows = items.map(item => ({ id: item.id, vals: Object.assign({}, item) }));
     const box = h('div', { class: 'rows' });
 
     const sync = () => rows.forEach(r => r.inputs && def.fields.forEach((f, i) => { r.vals[f.k] = r.inputs[i].read(); }));
@@ -240,18 +308,32 @@
     }
     draw();
 
-    const addRow = h('button', {
+    const add = h('button', {
       type: 'button', class: 'adm-pill',
       onclick: () => { sync(); rows.push({ vals: {} }); draw(); }
     }, '+ Add another');
 
-    openDialog(title, h('div', {}, box, addRow), [
+    return {
+      el: h('div', {}, box, add),
+      // rows that were filled in, in their current order
+      collect() {
+        sync();
+        return rows.filter(r => r.vals[def.fields[0].k]);
+      }
+    };
+  }
+
+  function editList(name, title) {
+    const def = LISTS[name];
+    const original = bck.current(name);
+    const ed = rowEditor(def, original);
+
+    openDialog(title, ed.el, [
       { label: 'Cancel', ghost: true, run: close => close() },
       {
         label: 'Save',
         run: async (close, btn) => {
-          sync();
-          const keep = rows.filter(r => r.vals[def.fields[0].k]);
+          const keep = ed.collect();
           const ok = await attempt(btn, () => {
             const col = bck.db.collection(def.col);
             const batch = bck.db.batch();
@@ -262,10 +344,33 @@
               def.fields.forEach(f => { data[f.k] = r.vals[f.k] == null ? '' : r.vals[f.k]; });
               batch.set(r.id ? col.doc(r.id) : col.doc(), data);
             });
-            batch.set(bck.db.collection('siteInfo').doc('main'), { [def.flag]: true }, { merge: true });
+            batch.set(siteDoc('main'), { [def.flag]: true }, { merge: true });
             return batch.commit();
           });
           if (ok) { close(); toast('Saved'); }
+        }
+      }
+    ]);
+  }
+
+  function editDocList(name, title) {
+    const def = DOC_LISTS[name];
+    const ed = rowEditor(def, bck.currentList(name));
+
+    openDialog(title, ed.el, [
+      { label: 'Cancel', ghost: true, run: close => close() },
+      {
+        label: 'Save',
+        run: async (close, btn) => {
+          const items = ed.collect().map(r => {
+            const item = {};
+            def.fields.forEach(f => { item[f.k] = r.vals[f.k] == null ? '' : r.vals[f.k]; });
+            return item;
+          });
+          if (await attempt(btn, () => siteDoc('lists').set({ [name]: items }, { merge: true }))) {
+            close();
+            toast('Saved');
+          }
         }
       }
     ]);
@@ -328,24 +433,45 @@
     document.querySelectorAll('.edit-slot').forEach(slot => {
       slot.replaceChildren();
       if (!isStaff) return;
-      const label = slot.dataset.label;
       const d = slot.dataset;
+      const label = d.label;
       if ('editGallery' in d) slot.append(pill(label, () => pickFiles(true, addPhotos)));
       if ('editPortrait' in d) {
         slot.append(pill(label, () => pickFiles(false, async files => {
           try {
             const src = await shrink(files[0], 800);
-            await bck.db.collection('siteInfo').doc('main').set({ portrait: src }, { merge: true });
+            await siteDoc('main').set({ portrait: src }, { merge: true });
             toast('Photo updated');
           } catch (err) { toast(explain(err), true); }
         })));
       }
       if (d.editList) slot.append(pill(label, () => editList(d.editList, label)));
+      if (d.editDocList) slot.append(pill(label, () => editDocList(d.editDocList, label)));
       if (d.editInfo) slot.append(pill(label, () => editInfo(d.editInfo.split(','), label)));
     });
     document.querySelectorAll('.adm-tools').forEach(el => el.remove());
     if (isStaff) decorateGallery();
   }
+
+  // while editing, tapping any marked part of the page opens its editor instead of following links
+  document.addEventListener('click', e => {
+    if (!isStaff || !editing) return;
+    if (e.target.closest('dialog, .adm-bar, .adm-tools, .edit-slot')) return;
+    const hit = e.target.closest('[data-t], [data-info], [data-list-editor], [data-doc-list-editor]');
+    if (!hit) return;
+    e.preventDefault();
+    e.stopPropagation();
+
+    if (hit.dataset.t) return editText(hit);
+    if (hit.dataset.info) {
+      return CONTACT_KEYS.includes(hit.dataset.info)
+        ? editInfo(CONTACT_KEYS, 'Edit contact info')
+        : editInfo(ABOUT_KEYS, 'Edit bio and numbers');
+    }
+    if (hit.dataset.listEditor) return editList(hit.dataset.listEditor, hit.dataset.listEditor === 'classes' ? 'Edit classes' : 'Edit passes');
+    const titles = { faq: 'Edit questions', steps: 'Edit steps', perks: 'Edit perks' };
+    editDocList(hit.dataset.docListEditor, titles[hit.dataset.docListEditor]);
+  }, true);
 
   /* ---------- start ---------- */
 
@@ -354,6 +480,7 @@
 
   bck.onReady(() => {
     bck.auth.onAuthStateChanged(user => {
+      const was = isStaff;
       isStaff = !!user && staff.includes((user.email || '').toLowerCase());
       if (user && !isStaff) {
         const sample = staff.some(e => e.endsWith('@example.com'));
@@ -363,9 +490,10 @@
         bck.auth.signOut();
         return;
       }
-      document.body.classList.toggle('is-admin', isStaff);
+      applyMode();
       drawBar(user);
       decorate();
+      if (isStaff && !was) toast('Tap any text with a dotted outline to change it.');
     });
   });
 })();

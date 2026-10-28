@@ -13,6 +13,7 @@
       if (k === 'class') node.className = v;
       else if (k === 'value') node.value = v;
       else if (k.startsWith('on')) node.addEventListener(k.slice(2), v);
+      else if (k.startsWith('aria-') && v != null) node.setAttribute(k, String(v));
       else if (v === true) node.setAttribute(k, '');
       else if (v !== false && v != null) node.setAttribute(k, v);
     }
