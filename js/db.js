@@ -22,7 +22,7 @@
   }
 
   const bck = window.bck = {
-    v: 4,
+    v: 5,
     configured,
     ready: false,
     db: null,

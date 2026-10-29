@@ -6,7 +6,7 @@
   const problem = !bck ? 'js/db.js did not load'
     : !window.BCK_CONFIG ? 'js/firebase-config.js was not found'
     : !bck.configured ? 'js/firebase-config.js still has the placeholder Firebase keys'
-    : !(bck.v >= 4 && bck.currentList && bck.openLightbox && bck.safeLink && bck.state && bck.state.text && bck.defaults && bck.defaults.lists)
+    : !(bck.v >= 5 && bck.currentList && bck.openLightbox && bck.safeLink && bck.state && bck.state.text && bck.defaults && bck.defaults.lists)
       ? 'some files in the js folder are older copies (db.js, defaults.js, media.js or site.js)'
       : '';
   if (problem) return addSetupLink(problem);
@@ -291,7 +291,7 @@
 
   function editInfo(keys, title) {
     const cur = bck.current('info');
-    const fields = keys.map(k => [k, field(INFO[k], cur[k])]);
+    const fields = keys.filter(k => INFO[k]).map(k => [k, field(INFO[k], cur[k])]);
     const problem = h('p', { class: 'dlg-error', role: 'alert' });
     openDialog(title, h('div', {}, fields.map(f => f[1].wrap), problem), [
       { label: 'Cancel', ghost: true, run: close => close() },
