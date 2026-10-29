@@ -23,20 +23,22 @@ window.bck.defaults = {
     students: '[000]+',
     styles: '4',
     zelle: 'pay@bailaconkatia.com',
-    cashapp: '$BailaConKatia'
+    cashapp: '$BailaConKatia',
+    paylink: ''
   },
   lists: {
     faq: [
-      { q: 'Do I need a partner?', a: 'No. We rotate partners during class.' },
+      { q: 'Do I need a partner?', a: 'No. We rotate partners during lessons.' },
       { q: 'What should I wear?', a: 'Comfortable clothes and shoes you can pivot in. Avoid sneakers with heavy grip.' },
-      { q: 'Are classes in English or Spanish?', a: 'Both. Katia teaches in English y español.' },
-      { q: 'Can I try one class first?', a: 'Yes. The drop-in pass is made for that.' }
+      { q: 'Are lessons in English or Spanish?', a: 'Both. Katia teaches in English y español.' },
+      { q: 'Can I try one lesson first?', a: 'Yes. The drop-in pass is made for that.' }
     ],
     steps: [
       { t: 'Warm-up.', d: 'Ten minutes to loosen up and find the beat.' },
       { t: 'Technique.', d: 'New steps broken down slowly, with partner rotation.' },
       { t: 'Social dance.', d: 'Put it to music with no pressure.' }
     ],
+    videos: [],
     perks: [
       { t: 'No partner needed' },
       { t: 'Beginners welcome' },

@@ -6,8 +6,8 @@
   const problem = !bck ? 'js/db.js did not load'
     : !window.BCK_CONFIG ? 'js/firebase-config.js was not found'
     : !bck.configured ? 'js/firebase-config.js still has the placeholder Firebase keys'
-    : !(bck.v >= 3 && bck.currentList && bck.state && bck.state.text && bck.defaults && bck.defaults.lists)
-      ? 'some files in the js folder are older copies (db.js, defaults.js or site.js)'
+    : !(bck.v >= 4 && bck.currentList && bck.openLightbox && bck.safeLink && bck.state && bck.state.text && bck.defaults && bck.defaults.lists)
+      ? 'some files in the js folder are older copies (db.js, defaults.js, media.js or site.js)'
       : '';
   if (problem) return addSetupLink(problem);
 
@@ -21,9 +21,9 @@
   // lists stored one document per item
   const LISTS = {
     classes: {
-      col: 'siteClasses', flag: 'editedClasses', noun: 'Class',
+      col: 'siteClasses', flag: 'editedClasses', noun: 'Lesson',
       fields: [
-        { k: 'name', label: 'Class name' },
+        { k: 'name', label: 'Lesson name' },
         { k: 'desc', label: 'Description', type: 'textarea' },
         { k: 'when', label: 'Level and time (example: Beginner · Mon 7:00 pm)' }
       ]
@@ -35,8 +35,10 @@
         { k: 'd', label: 'Short description' },
         { k: 'p', label: 'Price in dollars', type: 'number' },
         { k: 'n', label: 'Small note under the price' },
-        { k: 'tag', label: 'Badge, like "Most popular" (optional)' }
-      ]
+        { k: 'tag', label: 'Badge, like "Most popular" (optional)' },
+        { k: 'link', label: 'Payment link for this pass (optional, the shared link is used if empty)' }
+      ],
+      validate: items => items.some(i => i.link && !bck.safeLink(i.link)) ? 'Payment links must start with https://' : ''
     }
   };
 
@@ -53,6 +55,16 @@
     perks: {
       noun: 'Perk',
       fields: [{ k: 't', label: 'Perk' }]
+    },
+    videos: {
+      noun: 'Video',
+      max: 3,
+      hint: 'Paste a YouTube or Vimeo link (on YouTube, tap Share, then Copy link). Up to 3 videos.',
+      fields: [{ k: 'url', label: 'Video link' }, { k: 'cap', label: 'Caption (optional)' }],
+      validate: items => {
+        const bad = items.find(i => !bck.parseVideo(i.url));
+        return bad ? 'That is not a YouTube or Vimeo link: ' + bad.url : '';
+      }
     }
   };
 
@@ -66,7 +78,8 @@
     students: { label: 'Students taught (example: 500+)' },
     styles: { label: 'Dance styles offered' },
     zelle: { label: 'Zelle email or phone' },
-    cashapp: { label: 'Cash App name (example: $BailaConKatia)' }
+    cashapp: { label: 'Cash App name (example: $BailaConKatia)' },
+    paylink: { label: 'Online payment link (paste the full https:// link from Deluxe)' }
   };
 
   const CONTACT_KEYS = ['address', 'phone', 'hours', 'social'];
@@ -152,13 +165,15 @@
     });
   }
 
-  // keeps each photo small enough to live inside a Firestore document (1 MB limit)
-  async function shrink(file, max) {
-    let quality = 0.78;
-    let data = await toDataUrl(file, max, quality);
-    while (data.length > 700000 && quality > 0.4) {
-      quality -= 0.1;
-      data = await toDataUrl(file, max, quality);
+  // shrinks a picture until its data fits under `limit` characters (Firestore documents hold 1 MB)
+  async function shrink(file, max, limit = 700000) {
+    let size = max;
+    let quality = 0.8;
+    let data = await toDataUrl(file, size, quality);
+    while (data.length > limit && (quality > 0.5 || size > 500)) {
+      if (quality > 0.5) quality -= 0.1;
+      else size = Math.round(size * 0.85);
+      data = await toDataUrl(file, size, quality);
     }
     return data;
   }
@@ -273,13 +288,18 @@
   function editInfo(keys, title) {
     const cur = bck.current('info');
     const fields = keys.map(k => [k, field(INFO[k], cur[k])]);
-    openDialog(title, h('div', {}, fields.map(f => f[1].wrap)), [
+    const problem = h('p', { class: 'dlg-error', role: 'alert' });
+    openDialog(title, h('div', {}, fields.map(f => f[1].wrap), problem), [
       { label: 'Cancel', ghost: true, run: close => close() },
       {
         label: 'Save',
         run: async (close, btn) => {
           const data = {};
           fields.forEach(([k, f]) => { data[k] = f.read(); });
+          if (data.paylink && !bck.safeLink(data.paylink)) {
+            problem.textContent = 'The link must start with https://';
+            return;
+          }
           if (await attempt(btn, () => siteDoc('main').set(data, { merge: true }))) {
             close();
             toast('Saved');
@@ -292,9 +312,14 @@
   // rows you can edit, reorder, remove and add; shared by every list on the site
   function rowEditor(def, items) {
     const rows = items.map(item => ({ id: item.id, vals: Object.assign({}, item) }));
+    if (!rows.length) rows.push({ vals: {} });
     const box = h('div', { class: 'rows' });
-
     const sync = () => rows.forEach(r => r.inputs && def.fields.forEach((f, i) => { r.vals[f.k] = r.inputs[i].read(); }));
+
+    const add = h('button', {
+      type: 'button', class: 'adm-pill',
+      onclick: () => { sync(); rows.push({ vals: {} }); draw(); }
+    }, '+ Add another');
 
     function draw() {
       box.replaceChildren(...rows.map((row, i) => {
@@ -314,16 +339,12 @@
             h('button', { type: 'button', onclick: () => { sync(); rows.splice(i, 1); draw(); } }, 'Remove')),
           row.inputs.map(x => x.wrap));
       }));
+      add.disabled = rows.length >= (def.max || Infinity);
     }
     draw();
 
-    const add = h('button', {
-      type: 'button', class: 'adm-pill',
-      onclick: () => { sync(); rows.push({ vals: {} }); draw(); }
-    }, '+ Add another');
-
     return {
-      el: h('div', {}, box, add),
+      el: h('div', {}, def.hint ? h('p', { class: 'dlg-hint' }, def.hint) : null, box, add),
       // rows that were filled in, in their current order
       collect() {
         sync();
@@ -336,13 +357,17 @@
     const def = LISTS[name];
     const original = bck.current(name);
     const ed = rowEditor(def, original);
+    const problem = h('p', { class: 'dlg-error', role: 'alert' });
 
-    openDialog(title, ed.el, [
+    openDialog(title, h('div', {}, ed.el, problem), [
       { label: 'Cancel', ghost: true, run: close => close() },
       {
         label: 'Save',
         run: async (close, btn) => {
           const keep = ed.collect();
+          const why = def.validate ? def.validate(keep.map(r => r.vals)) : '';
+          problem.textContent = why;
+          if (why) return;
           const ok = await attempt(btn, () => {
             const col = bck.db.collection(def.col);
             const batch = bck.db.batch();
@@ -365,8 +390,9 @@
   function editDocList(name, title) {
     const def = DOC_LISTS[name];
     const ed = rowEditor(def, bck.currentList(name));
+    const problem = h('p', { class: 'dlg-error', role: 'alert' });
 
-    openDialog(title, ed.el, [
+    openDialog(title, h('div', {}, ed.el, problem), [
       { label: 'Cancel', ghost: true, run: close => close() },
       {
         label: 'Save',
@@ -376,6 +402,9 @@
             def.fields.forEach(f => { item[f.k] = r.vals[f.k] == null ? '' : r.vals[f.k]; });
             return item;
           });
+          const why = def.validate ? def.validate(items) : '';
+          problem.textContent = why;
+          if (why) return;
           if (await attempt(btn, () => siteDoc('lists').set({ [name]: items }, { merge: true }))) {
             close();
             toast('Saved');
@@ -395,8 +424,14 @@
       try {
         for (let i = 0; i < batch.length; i++) {
           toast(`Adding photo ${i + 1} of ${batch.length}...`);
-          const src = await shrink(batch[i], 1000);
-          await bck.db.collection('siteGallery').add({ src, cap: '', order: -Date.now() });
+          // the grid uses a small copy; the large one is only fetched when someone opens the photo
+          const thumb = await shrink(batch[i], 520, 120000);
+          const full = await shrink(batch[i], 1600, 850000);
+          const ref = bck.db.collection('siteGallery').doc();
+          const write = bck.db.batch();
+          write.set(ref, { src: thumb, cap: '', order: -Date.now(), full: true });
+          write.set(siteDoc('full_' + ref.id), { src: full });
+          await write.commit();
         }
         toast(files.length > room ? `Added ${room}. The gallery holds ${MAX_PHOTOS}.` : 'Photos added');
       } catch (err) {
@@ -431,7 +466,13 @@
         }, '★'),
         h('button', {
           type: 'button', 'aria-label': 'Delete photo',
-          onclick: run(async () => { if (confirm('Delete this photo?')) await bck.db.collection('siteGallery').doc(item.id).delete(); })
+          onclick: run(async () => {
+            if (!confirm('Delete this photo?')) return;
+            const gone = bck.db.batch();
+            gone.delete(bck.db.collection('siteGallery').doc(item.id));
+            gone.delete(siteDoc('full_' + item.id));
+            await gone.commit();
+          })
         }, '×')));
     });
   }
@@ -453,6 +494,22 @@
             toast('Photo updated');
           } catch (err) { toast(explain(err), true); }
         })));
+      }
+      if (d.editFlyer) {
+        const n = d.editFlyer;
+        const has = bck.state['flyer' + n] && bck.state['flyer' + n].src;
+        slot.append(pill(has ? 'Replace flyer ' + n : 'Add flyer ' + n, () => pickFiles(false, async files => {
+          try {
+            await siteDoc('flyer' + n).set({ src: await shrink(files[0], 1800, 900000) });
+            toast('Flyer saved');
+          } catch (err) { toast(explain(err), true); }
+        })));
+        if (has) {
+          slot.append(pill('Remove', async () => {
+            if (!confirm('Remove this flyer?')) return;
+            try { await siteDoc('flyer' + n).delete(); toast('Flyer removed'); } catch (err) { toast(explain(err), true); }
+          }));
+        }
       }
       if (d.editList) slot.append(pill(label, () => editList(d.editList, label)));
       if (d.editDocList) slot.append(pill(label, () => editDocList(d.editDocList, label)));
@@ -478,7 +535,7 @@
           ? editInfo(CONTACT_KEYS, 'Edit contact info')
           : editInfo(ABOUT_KEYS, 'Edit bio and numbers');
       }
-      if (hit.dataset.listEditor) return editList(hit.dataset.listEditor, hit.dataset.listEditor === 'classes' ? 'Edit classes' : 'Edit passes');
+      if (hit.dataset.listEditor) return editList(hit.dataset.listEditor, hit.dataset.listEditor === 'classes' ? 'Edit lessons' : 'Edit passes');
       const titles = { faq: 'Edit questions', steps: 'Edit steps', perks: 'Edit perks' };
       editDocList(hit.dataset.docListEditor, titles[hit.dataset.docListEditor]);
     } catch (err) {
