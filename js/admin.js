@@ -72,7 +72,10 @@
     address: { label: 'Studio address', type: 'textarea' },
     phone: { label: 'Phone' },
     hours: { label: 'Hours', type: 'textarea' },
-    social: { label: 'Social media' },
+    social: { label: 'Social media handle (example: @bailaconkatia)' },
+    instagram: { label: 'Instagram link (https://...)' },
+    facebook: { label: 'Facebook link (https://...)' },
+    tiktok: { label: 'TikTok link (https://...)' },
     bio: { label: 'About Katia', type: 'textarea' },
     years: { label: 'Years teaching (example: 8+)' },
     students: { label: 'Students taught (example: 500+)' },
@@ -82,7 +85,8 @@
     paylink: { label: 'Online payment link (paste the full https:// link from Deluxe)' }
   };
 
-  const CONTACT_KEYS = ['address', 'phone', 'hours', 'social'];
+  const CONTACT_KEYS = ['address', 'phone', 'hours', 'social', 'instagram', 'facebook', 'tiktok'];
+  const LINK_KEYS = ['paylink', 'instagram', 'facebook', 'tiktok'];
   const ABOUT_KEYS = ['bio', 'years', 'students', 'styles'];
 
   /* ---------- small helpers ---------- */
@@ -296,8 +300,8 @@
         run: async (close, btn) => {
           const data = {};
           fields.forEach(([k, f]) => { data[k] = f.read(); });
-          if (data.paylink && !bck.safeLink(data.paylink)) {
-            problem.textContent = 'The link must start with https://';
+          if (LINK_KEYS.some(k => data[k] && !bck.safeLink(data[k]))) {
+            problem.textContent = 'Links must start with https://';
             return;
           }
           if (await attempt(btn, () => siteDoc('main').set(data, { merge: true }))) {

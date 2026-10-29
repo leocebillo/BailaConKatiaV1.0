@@ -61,6 +61,7 @@ section { padding: 64px 0; }
 /* nav */
 nav { display: flex; justify-content: space-between; align-items: center; gap: 14px; padding: 16px 0; }
 nav b { font: 800 20px "Bricolage Grotesque", sans-serif; }
+#menu { display: flex; align-items: center; white-space: nowrap; }
 #menu a { margin-left: 18px; font-weight: 600; text-decoration: none; }
 #menu a[aria-current] { color: var(--gold); }
 #menu .btn { margin-left: 18px; }
@@ -379,3 +380,17 @@ body:not(.editing) .adm-tools { display: none; }
 .dlg-actions { flex-wrap: wrap; }
 .dlg label > textarea, .dlg label > input { display: block; margin-top: 4px; }
 .adm-bar .adm-toggle { background: var(--paper); color: var(--ink); }
+
+/* social links */
+.socials { display: flex; flex-wrap: wrap; gap: 10px; margin: 0 0 18px; }
+.social { padding: 10px 20px; border: 2px solid var(--fuchsia); border-radius: 999px; color: #fff; font-weight: 600; text-decoration: none; }
+.social:hover, .social:focus-visible { background: var(--fuchsia); }
+
+/* tablets and small laptops: menu becomes a scrolling row of pills before it can wrap */
+@media (max-width: 1000px) {
+  nav { flex-direction: column; align-items: flex-start; gap: 8px; padding: 12px 0; }
+  #menu { gap: 8px; width: 100%; padding-bottom: 6px; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+  #menu a { flex: 0 0 auto; margin: 0; padding: 9px 16px; border: 1.5px solid rgba(205, 183, 230, .4); border-radius: 999px; font-size: 15px; }
+  #menu a[aria-current] { background: var(--hot); border-color: var(--hot); color: #fff; }
+  #menu a.btn { border-color: transparent; }
+}

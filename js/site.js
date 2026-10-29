@@ -127,6 +127,12 @@
     document.querySelectorAll('[data-info]').forEach(el => {
       el.textContent = info[el.dataset.info] || '';
     });
+    const links = document.getElementById('socialLinks');
+    if (links) {
+      const nets = [['instagram', 'Instagram'], ['facebook', 'Facebook'], ['tiktok', 'TikTok']];
+      links.replaceChildren(...nets.filter(([k]) => bck.safeLink(info[k])).map(([k, name]) =>
+        h('a', { class: 'social', href: bck.safeLink(info[k]), target: '_blank', rel: 'noopener noreferrer' }, name)));
+    }
     const portrait = document.querySelector('[data-portrait]');
     if (portrait && state.info.portrait) {
       portrait.replaceChildren(h('img', { src: state.info.portrait, alt: 'Katia' }));
